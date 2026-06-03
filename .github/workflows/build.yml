@@ -25,28 +25,22 @@ jobs:
 
       - name: Build macOS app
         run: |
-          pyinstaller --onefile --windowed --name "标准通爬虫" \
+          pyinstaller --onefile --name "标准通爬虫" \
             --add-data "scraper.py:." \
             --add-data "app.py:." \
             --hidden-import streamlit \
+            --hidden-import streamlit.web.cli \
             --hidden-import pandas \
             --hidden-import openpyxl \
             --hidden-import requests \
-            app.py
-
-      - name: Create DMG
-        run: |
-          mkdir -p dmg-dist
-          cp -r dist/标准通爬虫.app dmg-dist/ 2>/dev/null || cp dist/标准通爬虫 dmg-dist/
-          hdiutil create -volname "标准通爬虫" -srcfolder dmg-dist -ov -format UDZO "标准通爬虫-macos.dmg"
+            --hidden-import tkinter \
+            launcher.py
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: |
-            标准通爬虫-macos.dmg
-            dist/标准通爬虫
+          path: dist/标准通爬虫
 
   build-windows:
     runs-on: windows-latest
@@ -66,14 +60,16 @@ jobs:
 
       - name: Build Windows exe
         run: |
-          pyinstaller --onefile --windowed --name "标准通爬虫" \
+          pyinstaller --onefile --name "标准通爬虫" \
             --add-data "scraper.py;." \
             --add-data "app.py;." \
             --hidden-import streamlit \
+            --hidden-import streamlit.web.cli \
             --hidden-import pandas \
             --hidden-import openpyxl \
             --hidden-import requests \
-            app.py
+            --hidden-import tkinter \
+            launcher.py
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -98,11 +94,15 @@ jobs:
         with:
           name: windows-build
 
+      - name: Rename files
+        run: |
+          mv 标准通爬虫 标准通爬虫-macos
+          chmod +x 标准通爬虫-macos
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            标准通爬虫-macos.dmg
-            标准通爬虫
+            标准通爬虫-macos
             标准通爬虫.exe
           generate_release_notes: true
