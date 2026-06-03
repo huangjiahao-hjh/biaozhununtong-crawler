@@ -24,13 +24,13 @@ jobs:
           pip install pyinstaller
 
       - name: Build macOS app
-        run: pyinstaller --onefile --name "标准通爬虫" --add-data "scraper.py:." --add-data "app.py:." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import pandas --hidden-import openpyxl --hidden-import requests --hidden-import tkinter launcher.py
+        run: pyinstaller --onefile --name "bzton-crawler" --add-data "scraper.py:." --add-data "app.py:." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import pandas --hidden-import openpyxl --hidden-import requests --hidden-import tkinter launcher.py
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: dist/标准通爬虫
+          path: dist/bzton-crawler
 
   build-windows:
     runs-on: windows-latest
@@ -49,13 +49,13 @@ jobs:
           pip install pyinstaller
 
       - name: Build Windows exe
-        run: pyinstaller --onefile --name "标准通爬虫" --add-data "scraper.py;." --add-data "app.py;." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import pandas --hidden-import openpyxl --hidden-import requests --hidden-import tkinter launcher.py
+        run: pyinstaller --onefile --name "bzton-crawler" --add-data "scraper.py;." --add-data "app.py;." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import pandas --hidden-import openpyxl --hidden-import requests --hidden-import tkinter launcher.py
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: dist/标准通爬虫.exe
+          path: dist/bzton-crawler.exe
 
   release:
     needs: [build-macos, build-windows]
@@ -76,13 +76,13 @@ jobs:
 
       - name: Rename files
         run: |
-          mv 标准通爬虫 标准通爬虫-macos
-          chmod +x 标准通爬虫-macos
+          mv bzton-crawler bzton-crawler-macos
+          chmod +x bzton-crawler-macos
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            标准通爬虫-macos
-            标准通爬虫.exe
+            bzton-crawler-macos
+            bzton-crawler.exe
           generate_release_notes: true
