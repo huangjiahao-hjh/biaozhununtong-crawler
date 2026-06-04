@@ -45,6 +45,7 @@ jobs:
 
       - name: Create ZIP
         run: |
+          cp 使用说明.txt dist/bzton-crawler/
           cd dist
           zip -r ../bzton-crawler-macos.zip bzton-crawler/
 
@@ -76,6 +77,7 @@ jobs:
 
       - name: Create ZIP
         run: |
+          Copy-Item 使用说明.txt dist\bzton-crawler\
           Compress-Archive -Path dist\bzton-crawler -DestinationPath bzton-crawler-windows.zip
 
       - name: Upload Windows artifact

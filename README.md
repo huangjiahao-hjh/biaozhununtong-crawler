@@ -117,6 +117,30 @@ python scraper.py --keyword 人工智能 --max-pages 5 --output results.xlsx
 - openpyxl - Excel 读写
 - streamlit - Web 界面
 
+## 桌面版使用说明
+
+### macOS 用户
+
+首次运行可能会提示"已损坏，无法打开"或"来自未知开发者"，请按以下步骤操作：
+
+1. 解压下载的 ZIP 文件
+2. 打开终端，进入解压后的文件夹
+3. 执行以下命令移除隔离属性：
+   ```bash
+   xattr -cr .
+   ```
+4. 双击 `bzton-crawler` 运行
+
+或者：
+- 打开 **系统偏好设置 > 安全性与隐私 > 通用**
+- 点击 **"仍要打开"**
+
+### Windows 用户
+
+1. 解压下载的 ZIP 文件
+2. 双击 `bzton-crawler.exe` 运行
+3. 如果 Windows Defender 提示警告，点击 **"更多信息" > "仍要运行"**
+
 ## License
 
 MIT
