@@ -24,13 +24,35 @@ jobs:
           pip install pyinstaller
 
       - name: Build macOS app
-        run: pyinstaller --onefile --name "bzton-crawler" --add-data "scraper.py:." --add-data "app.py:." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import pandas --hidden-import openpyxl --hidden-import requests --hidden-import tkinter launcher.py
+        run: |
+          python -m PyInstaller \
+            --name "bzton-crawler" \
+            --noconfirm \
+            --clean \
+            --windowed \
+            --onedir \
+            --add-data "app.py:." \
+            --add-data "scraper.py:." \
+            --hidden-import streamlit \
+            --hidden-import streamlit.web.cli \
+            --hidden-import streamlit.runtime.scriptrunner.magic_funcs \
+            --hidden-import pandas \
+            --hidden-import requests \
+            --hidden-import openpyxl \
+            --collect-all streamlit \
+            --collect-all pandas \
+            launcher.py
+
+      - name: Create ZIP
+        run: |
+          cd dist
+          zip -r ../bzton-crawler-macos.zip bzton-crawler/
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: dist/bzton-crawler
+          path: bzton-crawler-macos.zip
 
   build-windows:
     runs-on: windows-latest
@@ -49,13 +71,18 @@ jobs:
           pip install pyinstaller
 
       - name: Build Windows exe
-        run: pyinstaller --onefile --name "bzton-crawler" --add-data "scraper.py;." --add-data "app.py;." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import pandas --hidden-import openpyxl --hidden-import requests --hidden-import tkinter launcher.py
+        run: |
+          python -m PyInstaller --name "bzton-crawler" --noconfirm --clean --windowed --onedir --add-data "app.py;." --add-data "scraper.py;." --hidden-import streamlit --hidden-import streamlit.web.cli --hidden-import streamlit.runtime.scriptrunner.magic_funcs --hidden-import pandas --hidden-import requests --hidden-import openpyxl --collect-all streamlit --collect-all pandas launcher.py
+
+      - name: Create ZIP
+        run: |
+          Compress-Archive -Path dist\bzton-crawler -DestinationPath bzton-crawler-windows.zip
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: dist/bzton-crawler.exe
+          path: bzton-crawler-windows.zip
 
   release:
     needs: [build-macos, build-windows]
@@ -74,15 +101,10 @@ jobs:
         with:
           name: windows-build
 
-      - name: Rename files
-        run: |
-          mv bzton-crawler bzton-crawler-macos
-          chmod +x bzton-crawler-macos
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bzton-crawler-macos
-            bzton-crawler.exe
+            bzton-crawler-macos.zip
+            bzton-crawler-windows.zip
           generate_release_notes: true

@@ -1,126 +1,105 @@
 #!/usr/bin/env python3
-"""标准通爬虫桌面启动器"""
-import subprocess
-import sys
+"""标准通爬虫 - 桌面启动器"""
 import os
-import webbrowser
-import time
-import signal
-import tkinter as tk
-from tkinter import messagebox
+import socket
+import sys
 import threading
+import time
+import webbrowser
 
-def get_resource_path(relative_path):
-    """获取资源文件路径（兼容 PyInstaller 打包）"""
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
 
-def start_streamlit():
-    """启动 Streamlit 服务"""
-    app_path = get_resource_path('app.py')
-    cmd = [
-        sys.executable, '-m', 'streamlit', 'run', app_path,
-        '--server.headless', 'true',
-        '--server.port', '8501',
-        '--browser.gatherUsageStats', 'false'
+def get_base_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def find_app_path(base_dir):
+    candidates = [
+        os.path.join(base_dir, "app.py"),
+        os.path.join(base_dir, "_internal", "app.py"),
     ]
-    return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    for root, _dirs, files in os.walk(base_dir):
+        if "app.py" in files:
+            return os.path.join(root, "app.py")
+    return None
 
-class LauncherApp:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("标准通爬虫")
-        self.root.geometry("400x200")
-        self.root.resizable(False, False)
 
-        # 设置窗口图标（如果存在）
-        try:
-            icon_path = get_resource_path('icon.ico')
-            if os.path.exists(icon_path):
-                self.root.iconbitmap(icon_path)
-        except:
-            pass
+def find_available_port(start=8501, max_tries=20):
+    """从 start 开始寻找可用端口"""
+    for port in range(start, start + max_tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    return start
 
-        self.process = None
-        self.setup_ui()
 
-    def setup_ui(self):
-        """设置界面"""
-        # 标题
-        title_label = tk.Label(self.root, text="标准通爬虫", font=("Arial", 20, "bold"))
-        title_label.pack(pady=20)
+def open_browser(url, delay=3):
+    time.sleep(delay)
+    webbrowser.open(url)
 
-        # 说明
-        desc_label = tk.Label(self.root, text="从标准通(www.bzton.com)批量抓取标准信息", font=("Arial", 10))
-        desc_label.pack()
 
-        # 按钮框架
-        btn_frame = tk.Frame(self.root)
-        btn_frame.pack(pady=30)
+def main():
+    base_dir = get_base_dir()
+    app_path = find_app_path(base_dir)
 
-        # 启动按钮
-        self.start_btn = tk.Button(btn_frame, text="启动应用", command=self.start_app,
-                                   font=("Arial", 12), width=15, height=2, bg="#4CAF50", fg="white")
-        self.start_btn.pack(side=tk.LEFT, padx=10)
+    if not app_path:
+        input(
+            "错误：找不到 app.py 文件。\n"
+            "请确保 launcher.py 和 app.py 在同一个目录。\n\n按 Enter 退出..."
+        )
+        sys.exit(1)
 
-        # 退出按钮
-        self.quit_btn = tk.Button(btn_frame, text="退出", command=self.quit_app,
-                                  font=("Arial", 12), width=15, height=2)
-        self.quit_btn.pack(side=tk.LEFT, padx=10)
+    port = find_available_port()
+    url = f"http://localhost:{port}"
 
-        # 状态标签
-        self.status_label = tk.Label(self.root, text="就绪", font=("Arial", 9), fg="gray")
-        self.status_label.pack(side=tk.BOTTOM, pady=10)
+    print("=" * 52)
+    print("      标准通爬虫")
+    print("=" * 52)
+    print()
+    print(f"  正在启动服务...")
+    if port != 8501:
+        print(f"  端口 8501 已被占用，使用端口 {port}")
+    print(f"  启动后浏览器将自动打开")
+    print(f"  地址：{url}")
+    print()
+    print("  关闭窗口或按 Ctrl+C 即可停止")
+    print("-" * 52)
 
-    def start_app(self):
-        """启动 Streamlit 应用"""
-        self.start_btn.config(state=tk.DISABLED, text="启动中...")
-        self.status_label.config(text="正在启动 Streamlit 服务...", fg="blue")
-        self.root.update()
+    threading.Thread(target=open_browser, args=(url,), daemon=True).start()
 
-        # 在新线程中启动 Streamlit
-        threading.Thread(target=self._start_streamlit_thread, daemon=True).start()
+    # 直接调用 Streamlit CLI
+    from streamlit.web import cli as st_cli
 
-    def _start_streamlit_thread(self):
-        """在后台线程中启动 Streamlit"""
-        try:
-            self.process = start_streamlit()
+    sys.argv = [
+        "streamlit",
+        "run",
+        app_path,
+        "--server.port",
+        str(port),
+        "--server.headless",
+        "true",
+        "--server.enableXsrfProtection",
+        "false",
+        "--browser.gatherUsageStats",
+        "false",
+        "--server.fileWatcherType",
+        "none",
+        "--global.developmentMode",
+        "false",
+    ]
+    try:
+        st_cli.main()
+    except SystemExit:
+        pass
+    except Exception as e:
+        print(f"\n启动失败: {e}")
+        print("请尝试关闭其他程序后重试。")
+        input("\n按 Enter 退出...")
 
-            # 等待服务启动
-            time.sleep(5)
 
-            # 打开浏览器
-            webbrowser.open('http://localhost:8501')
-
-            # 更新 UI
-            self.root.after(0, self._update_ui_running)
-        except Exception as e:
-            self.root.after(0, lambda: self._update_ui_error(str(e)))
-
-    def _update_ui_running(self):
-        """更新 UI 为运行状态"""
-        self.start_btn.config(text="已在浏览器中打开", state=tk.DISABLED)
-        self.status_label.config(text="服务运行中，关闭此窗口将停止服务", fg="green")
-
-    def _update_ui_error(self, error):
-        """更新 UI 为错误状态"""
-        self.start_btn.config(state=tk.NORMAL, text="启动应用")
-        self.status_label.config(text=f"启动失败: {error}", fg="red")
-        messagebox.showerror("错误", f"启动失败: {error}")
-
-    def quit_app(self):
-        """退出应用"""
-        if self.process:
-            self.process.terminate()
-            self.process.wait(timeout=5)
-        self.root.destroy()
-
-    def run(self):
-        """运行启动器"""
-        self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
-        self.root.mainloop()
-
-if __name__ == '__main__':
-    app = LauncherApp()
-    app.run()
+if __name__ == "__main__":
+    main()
